@@ -34,12 +34,12 @@ const fetchAPI = async (url) => {
 };
 
 /**
- * Get state population data from Population Estimates Program (PEP)
- * Uses 2023 vintage data
+ * Get state population data from American Community Survey (ACS)
+ * Uses 2022 5-year estimates (most recent stable data)
  */
 export const getStatePopulation = async () => {
-  const url = buildURL('/2023/pep/population', {
-    get: 'POP_2023,NAME',
+  const url = buildURL('/2022/acs/acs5', {
+    get: 'NAME,B01003_001E',
     for: 'state:*'
   });
 
@@ -50,8 +50,8 @@ export const getStatePopulation = async () => {
   const [headers, ...rows] = data;
 
   return rows.map(row => ({
-    state: row[1], // NAME
-    population: parseInt(row[0]), // POP_2023
+    state: row[0], // NAME
+    population: parseInt(row[1]), // B01003_001E (Total Population)
     stateCode: row[2] // state code
   }));
 };
