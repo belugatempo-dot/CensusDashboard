@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
 import { getAllStatesData, getAgeDistribution, getRaceData } from './services/censusAPI';
+import { useLanguage } from './i18n/useLanguage';
 
 // 行业就业数据 (保持静态数据 - Census API 没有直接提供此数据)
 const industryData = [
@@ -861,11 +862,23 @@ export default function CensusDashboard() {
                       maleNeg: -d.male
                     }))}
                     layout="vertical"
-                    margin={{ left: 20, right: 20 }}
+                    margin={{ left: 20, right: 20, bottom: 20 }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                    <XAxis type="number" stroke="#64748b" fontSize={12} domain={[-30, 30]} />
-                    <YAxis type="category" dataKey="age" stroke="#64748b" fontSize={11} />
+                    <XAxis
+                      type="number"
+                      stroke="#64748b"
+                      fontSize={12}
+                      domain={[-30, 30]}
+                      label={{ value: '人口 (百万)', position: 'bottom', style: { fill: '#94a3b8', fontSize: 13 } }}
+                    />
+                    <YAxis
+                      type="category"
+                      dataKey="age"
+                      stroke="#64748b"
+                      fontSize={11}
+                      label={{ value: '年龄组', angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 13 } }}
+                    />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
                     <Bar dataKey="maleNeg" name="男性" fill="#3b82f6" radius={[6, 0, 0, 6]} />
