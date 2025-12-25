@@ -855,7 +855,7 @@ export default function CensusDashboard() {
 
               <ChartContainer title="年龄金字塔" subtitle="人口年龄结构">
                 <ResponsiveContainer width="100%" height={350}>
-                  <BarChart 
+                  <BarChart
                     data={ageDistributionData.map(d => ({
                       ...d,
                       maleNeg: -d.male
@@ -867,6 +867,7 @@ export default function CensusDashboard() {
                     <XAxis type="number" stroke="#64748b" fontSize={12} domain={[-30, 30]} />
                     <YAxis type="category" dataKey="age" stroke="#64748b" fontSize={11} />
                     <Tooltip content={<CustomTooltip />} />
+                    <Legend />
                     <Bar dataKey="maleNeg" name="男性" fill="#3b82f6" radius={[6, 0, 0, 6]} />
                     <Bar dataKey="female" name="女性" fill="#ec4899" radius={[0, 6, 6, 0]} />
                   </BarChart>
