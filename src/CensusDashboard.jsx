@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis } from 'recharts';
-import { getAllStatesData, getAgeDistribution, getRaceData } from './services/censusAPI';
+import { getAllStatesData, getAgeDistribution, getRaceData, getHistoricalPopulation } from './services/censusAPI';
 import { useLanguage } from './i18n/useLanguage';
 
 // 行业就业数据 (保持静态数据 - Census API 没有直接提供此数据)
@@ -15,18 +15,7 @@ const industryData = [
   { industry: '信息技术', employment: 3.2, growth: 11.2 },
 ];
 
-// 历史人口趋势 (保持静态数据 - 历史数据)
-const populationTrendData = [
-  { year: '1950', population: 151.3, urban: 64 },
-  { year: '1960', population: 179.3, urban: 70 },
-  { year: '1970', population: 203.2, urban: 74 },
-  { year: '1980', population: 226.5, urban: 74 },
-  { year: '1990', population: 248.7, urban: 75 },
-  { year: '2000', population: 281.4, urban: 79 },
-  { year: '2010', population: 308.7, urban: 81 },
-  { year: '2020', population: 331.4, urban: 83 },
-  { year: '2024', population: 336.0, urban: 84 },
-];
+// 历史人口趋势 - now fetched from API (getHistoricalPopulation)
 
 // 经济指标雷达图数据
 const economicRadarData = [
@@ -178,6 +167,7 @@ export default function CensusDashboard() {
   const [statePopulationData, setStatePopulationData] = useState([]);
   const [ageDistributionData, setAgeDistributionData] = useState([]);
   const [raceData, setRaceData] = useState([]);
+  const [populationTrendData, setPopulationTrendData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -192,15 +182,17 @@ export default function CensusDashboard() {
       setError(null);
 
       try {
-        const [statesData, ageData, raceDataResult] = await Promise.all([
+        const [statesData, ageData, raceDataResult, historicalData] = await Promise.all([
           getAllStatesData(),
           getAgeDistribution(),
-          getRaceData()
+          getRaceData(),
+          getHistoricalPopulation()
         ]);
 
         setStatePopulationData(statesData);
         setAgeDistributionData(ageData);
         setRaceData(raceDataResult);
+        setPopulationTrendData(historicalData);
       } catch (err) {
         console.error('Failed to fetch Census data:', err);
         setError('无法加载 Census 数据。请检查 API 密钥配置或稍后重试。');
@@ -484,31 +476,31 @@ export default function CensusDashboard() {
               gap: '24px',
               marginBottom: '32px'
             }}>
-              <StatCard 
-                title="美国总人口" 
-                value="336.0M" 
-                subtitle="2024年估计"
+              <StatCard
+                title={t.statCards.totalPopulation}
+                value="336.0M"
+                subtitle={t.statCards.estimate2024}
                 trend={0.5}
                 icon="👥"
               />
-              <StatCard 
-                title="家庭收入中位数" 
-                value="$83,730" 
-                subtitle="年度数据"
+              <StatCard
+                title={t.statCards.medianIncome}
+                value="$83,730"
+                subtitle={t.statCards.annualData}
                 trend={2.1}
                 icon="💵"
               />
-              <StatCard 
-                title="失业率" 
-                value="3.9%" 
-                subtitle="季度更新"
+              <StatCard
+                title={t.statCards.unemploymentRate}
+                value="3.9%"
+                subtitle={t.statCards.quarterlyUpdate}
                 trend={-0.3}
                 icon="📉"
               />
-              <StatCard 
-                title="城镇化率" 
-                value="84%" 
-                subtitle="持续增长"
+              <StatCard
+                title={t.statCards.urbanization}
+                value="84%"
+                subtitle={t.statCards.continuousGrowth}
                 trend={0.8}
                 icon="🏙️"
               />
@@ -516,7 +508,7 @@ export default function CensusDashboard() {
 
             {/* Charts Row 1 */}
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '24px' }}>
-              <ChartContainer title="各州人口排名 (Top 10)" subtitle="数据来源: Census Bureau Population Estimates">
+              <ChartContainer title={t.charts.stateRanking} subtitle={t.charts.censusSource}>
                 <ResponsiveContainer width="100%" height={350}>
                   <BarChart data={statePopulationData} layout="vertical" margin={{ left: 20, right: 30 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
@@ -539,7 +531,7 @@ export default function CensusDashboard() {
                 </ResponsiveContainer>
               </ChartContainer>
 
-              <ChartContainer title="种族构成" subtitle="2024年人口比例">
+              <ChartContainer title={t.charts.raceComposition} subtitle={t.charts.populationPercent}>
                 <ResponsiveContainer width="100%" height={350}>
                   <PieChart>
                     <Pie
@@ -565,7 +557,7 @@ export default function CensusDashboard() {
 
             {/* Charts Row 2 */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-              <ChartContainer title="人口历史趋势" subtitle="1950-2024 (百万)">
+              <ChartContainer title={t.charts.populationTrend} subtitle={t.charts.historicalData}>
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={populationTrendData}>
                     <defs>
@@ -591,7 +583,7 @@ export default function CensusDashboard() {
                 </ResponsiveContainer>
               </ChartContainer>
 
-              <ChartContainer title="经济健康指数" subtitle="综合评估 (满分100)">
+              <ChartContainer title={t.charts.economicHealth} subtitle={t.charts.fullScore}>
                 <ResponsiveContainer width="100%" height={300}>
                   <RadarChart data={economicRadarData}>
                     <PolarGrid stroke="rgba(148, 163, 184, 0.2)" />
@@ -617,7 +609,7 @@ export default function CensusDashboard() {
         {activeTab === 'population' && (
           <div className="animate-in">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-              <ChartContainer title="年龄分布" subtitle="按性别划分 (百万)">
+              <ChartContainer title={t.charts.ageDistribution} subtitle={t.charts.byGender}>
                 <ResponsiveContainer width="100%" height={400}>
                   <BarChart data={ageDistributionData} margin={{ left: 10 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
@@ -631,7 +623,7 @@ export default function CensusDashboard() {
                 </ResponsiveContainer>
               </ChartContainer>
 
-              <ChartContainer title="城镇化趋势" subtitle="城市人口占比 (%)">
+              <ChartContainer title={t.charts.urbanizationTrend} subtitle={t.charts.urbanPercent}>
                 <ResponsiveContainer width="100%" height={400}>
                   <LineChart data={populationTrendData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
@@ -653,17 +645,17 @@ export default function CensusDashboard() {
             </div>
 
             {/* State Details Table */}
-            <ChartContainer title="各州详细数据" subtitle="点击行查看更多信息">
+            <ChartContainer title={t.charts.stateDetails} subtitle={t.charts.clickForMore}>
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
                     <tr style={{ borderBottom: '2px solid rgba(59, 130, 246, 0.3)' }}>
-                      <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>州</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>人口</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>增长率</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>收入中位数</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>失业率</th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>状态</th>
+                      <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>{t.table.state}</th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>{t.table.population}</th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>{t.table.growthRate}</th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>{t.table.medianIncome}</th>
+                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>{t.table.unemploymentRate}</th>
+                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>{t.table.status}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -722,7 +714,7 @@ export default function CensusDashboard() {
                             background: state.growth > 1 ? 'rgba(16, 185, 129, 0.2)' : state.growth > 0 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
                             color: state.growth > 1 ? '#10b981' : state.growth > 0 ? '#f59e0b' : '#ef4444',
                           }}>
-                            {state.growth > 1 ? '快速增长' : state.growth > 0 ? '缓慢增长' : '人口流失'}
+                            {state.growth > 1 ? t.table.rapidGrowth : state.growth > 0 ? t.table.slowGrowth : t.table.populationLoss}
                           </span>
                         </td>
                       </tr>
@@ -774,7 +766,7 @@ export default function CensusDashboard() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-              <ChartContainer title="行业就业分布" subtitle="各行业就业人数 (百万)">
+              <ChartContainer title={t.charts.industryEmployment} subtitle={t.charts.employmentMillions}>
                 <ResponsiveContainer width="100%" height={400}>
                   <BarChart data={industryData} layout="vertical" margin={{ left: 30, right: 30 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
@@ -794,7 +786,7 @@ export default function CensusDashboard() {
                 </ResponsiveContainer>
               </ChartContainer>
 
-              <ChartContainer title="行业增长预测" subtitle="未来10年增长率 (%)">
+              <ChartContainer title={t.charts.industryGrowth} subtitle={t.charts.next10Years}>
                 <ResponsiveContainer width="100%" height={400}>
                   <BarChart data={industryData} margin={{ left: 30, right: 30 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
@@ -818,7 +810,7 @@ export default function CensusDashboard() {
               </ChartContainer>
             </div>
 
-            <ChartContainer title="各州收入对比" subtitle="家庭收入中位数 (美元)">
+            <ChartContainer title={t.charts.incomeComparison} subtitle={t.charts.medianIncomeUSD}>
               <ResponsiveContainer width="100%" height={350}>
                 <BarChart data={statePopulationData} margin={{ bottom: 50 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
@@ -860,7 +852,7 @@ export default function CensusDashboard() {
         {activeTab === 'demographics' && (
           <div className="animate-in">
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', marginBottom: '24px' }}>
-              <ChartContainer title="种族构成详情" subtitle="2024年人口占比">
+              <ChartContainer title={t.charts.raceDetails} subtitle={t.charts.populationPercent}>
                 <ResponsiveContainer width="100%" height={350}>
                   <PieChart>
                     <Pie
@@ -881,7 +873,7 @@ export default function CensusDashboard() {
                 </ResponsiveContainer>
               </ChartContainer>
 
-              <ChartContainer title="年龄金字塔" subtitle="人口年龄结构">
+              <ChartContainer title={t.charts.agePyramid} subtitle={t.charts.populationStructure}>
                 <ResponsiveContainer width="100%" height={350}>
                   <BarChart
                     data={ageDistributionData.map(d => ({
@@ -897,14 +889,14 @@ export default function CensusDashboard() {
                       stroke="#64748b"
                       fontSize={12}
                       domain={[-30, 30]}
-                      label={{ value: '人口 (百万)', position: 'bottom', style: { fill: '#94a3b8', fontSize: 13 } }}
+                      label={{ value: t.axis.population, position: 'bottom', style: { fill: '#94a3b8', fontSize: 13 } }}
                     />
                     <YAxis
                       type="category"
                       dataKey="age"
                       stroke="#64748b"
                       fontSize={11}
-                      label={{ value: '年龄组', angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 13 } }}
+                      label={{ value: t.axis.ageGroup, angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 13 } }}
                     />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
@@ -914,15 +906,15 @@ export default function CensusDashboard() {
                 </ResponsiveContainer>
               </ChartContainer>
 
-              <ChartContainer title="关键人口指标" subtitle="2024年数据">
+              <ChartContainer title={t.charts.keyIndicators} subtitle={t.charts.populationData2024}>
                 <div style={{ padding: '20px' }}>
                   {[
-                    { label: '中位年龄', value: '38.9 岁', icon: '🎂' },
-                    { label: '家庭平均规模', value: '2.51 人', icon: '👨‍👩‍👧' },
-                    { label: '65岁以上', value: '17.3%', icon: '👴' },
-                    { label: '18岁以下', value: '21.7%', icon: '👶' },
-                    { label: '外国出生', value: '14.3%', icon: '✈️' },
-                    { label: '大学学历', value: '33.7%', icon: '🎓' },
+                    { label: t.demographics.medianAge, value: `38.9 ${t.demographics.years}`, icon: '🎂' },
+                    { label: t.demographics.householdSize, value: `2.51 ${t.demographics.people}`, icon: '👨‍👩‍👧' },
+                    { label: t.demographics.over65, value: '17.3%', icon: '👴' },
+                    { label: t.demographics.under18, value: '21.7%', icon: '👶' },
+                    { label: t.demographics.foreignBorn, value: '14.3%', icon: '✈️' },
+                    { label: t.demographics.collegeEducated, value: '33.7%', icon: '🎓' },
                   ].map((item, index) => (
                     <div 
                       key={index}
@@ -953,7 +945,7 @@ export default function CensusDashboard() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
-              <ChartContainer title="人口总量年度变化" subtitle="各年新增人口 (百万)">
+              <ChartContainer title={t.charts.populationChange} subtitle={t.charts.yearlyNewPop}>
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart 
                     data={populationTrendData.map((d, i, arr) => ({
@@ -984,7 +976,7 @@ export default function CensusDashboard() {
                 </ResponsiveContainer>
               </ChartContainer>
 
-              <ChartContainer title="数据来源" subtitle="Census Bureau 公开数据集">
+              <ChartContainer title={t.charts.dataSources} subtitle={t.charts.censusDatasets}>
                 <div style={{ padding: '16px' }}>
                   {[
                     { name: 'American Community Survey', year: '2024' },
@@ -1033,7 +1025,7 @@ export default function CensusDashboard() {
                       fontSize: '14px'
                     }}
                   >
-                    访问 data.census.gov →
+                    {t.sources.visit} →
                   </a>
                 </div>
               </ChartContainer>
@@ -1057,10 +1049,10 @@ export default function CensusDashboard() {
           alignItems: 'center'
         }}>
           <p style={{ color: '#64748b', fontSize: '13px' }}>
-            数据来源: U.S. Census Bureau | 仅供参考，非官方数据
+            {t.footer.dataSource}
           </p>
           <p style={{ color: '#64748b', fontSize: '13px' }}>
-            Built with React & Recharts · 2024
+            {t.footer.builtWith}
           </p>
         </div>
       </footer>
