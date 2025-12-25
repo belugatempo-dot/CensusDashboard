@@ -36,19 +36,20 @@ npm install
 
 ### 3. 配置环境变量
 
-复制 `.env.example` 文件并重命名为 `.env`:
+创建 `.env.local` 文件：
 
 ```bash
-cp .env.example .env
+# 创建本地环境变量文件
+touch .env.local
 ```
 
-编辑 `.env` 文件，填入您的 API 密钥:
+编辑 `.env.local` 文件，填入您的 API 密钥:
 
 ```
 VITE_CENSUS_API_KEY=your_api_key_here
 ```
 
-**注意**: 如果不配置 API 密钥，应用仍可运行，但可能会遇到请求限制。
+**注意**: 如果不配置 API 密钥，应用仍可运行，但可能会遇到请求限制。`.env.local` 已在 `.gitignore` 中，不会被提交到 Git。
 
 ### 4. 运行开发服务器
 
@@ -58,7 +59,20 @@ npm run dev
 
 应用将在 `http://localhost:3000` 启动，浏览器会自动打开。
 
-### 5. 构建生产版本
+### 5. 运行测试
+
+```bash
+# 运行所有测试
+npm test
+
+# 运行测试并查看 UI 界面
+npm run test:ui
+
+# 运行测试并生成覆盖率报告
+npm run test:coverage
+```
+
+### 6. 构建生产版本
 
 ```bash
 npm run build
@@ -129,7 +143,47 @@ CensusDashboard/
 - **React 18** - UI 框架
 - **Recharts 2** - 图表库
 - **Vite 6** - 构建工具
+- **Vitest** - 单元测试框架
+- **Testing Library** - React 组件测试
 - **Census API** - 数据源
+
+## 测试
+
+项目包含全面的自动化测试：
+
+### 单元测试
+- **API 服务测试** (`src/services/__tests__/censusAPI.test.js`)
+  - 数据获取和转换逻辑
+  - 错误处理
+  - API URL 构建
+  - Mock fetch 请求
+
+- **组件测试** (`src/__tests__/CensusDashboard.test.jsx`)
+  - 加载状态
+  - 错误状态
+  - 数据渲染
+  - 标签切换
+  - 可访问性
+
+### 运行测试
+
+```bash
+# Watch 模式（开发时推荐）
+npm test
+
+# UI 界面模式
+npm run test:ui
+
+# 生成覆盖率报告
+npm run test:coverage
+```
+
+### 测试覆盖率
+
+覆盖率报告将生成在 `coverage/` 目录，包含：
+- HTML 报告（可在浏览器中查看）
+- JSON 报告
+- 文本报告（终端输出）
 
 ## 数据说明
 
