@@ -167,6 +167,9 @@ const ChartContainer = ({ title, children, subtitle }) => (
 
 // 主应用
 export default function CensusDashboard() {
+  // Language support
+  const { language, toggleLanguage, t } = useLanguage();
+
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedState, setSelectedState] = useState(null);
   const [animationKey, setAnimationKey] = useState(0);
@@ -210,10 +213,10 @@ export default function CensusDashboard() {
   }, []);
 
   const tabs = [
-    { id: 'overview', label: '总览', icon: '📊' },
-    { id: 'population', label: '人口', icon: '👥' },
-    { id: 'economy', label: '经济', icon: '💰' },
-    { id: 'demographics', label: '人口结构', icon: '📈' },
+    { id: 'overview', label: t.tabs.overview, icon: '📊' },
+    { id: 'population', label: t.tabs.population, icon: '👥' },
+    { id: 'economy', label: t.tabs.economy, icon: '💰' },
+    { id: 'demographics', label: t.tabs.demographics, icon: '📈' },
   ];
 
   // Loading state
@@ -242,7 +245,7 @@ export default function CensusDashboard() {
             100% { transform: rotate(360deg); }
           }
         `}</style>
-        <p style={{ color: '#94a3b8', fontSize: '16px' }}>加载 Census Bureau 数据...</p>
+        <p style={{ color: '#94a3b8', fontSize: '16px' }}>{t.loading}</p>
       </div>
     );
   }
@@ -269,8 +272,8 @@ export default function CensusDashboard() {
           textAlign: 'center'
         }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
-          <h2 style={{ color: '#ef4444', marginBottom: '12px' }}>数据加载失败</h2>
-          <p style={{ color: '#94a3b8', marginBottom: '20px' }}>{error}</p>
+          <h2 style={{ color: '#ef4444', marginBottom: '12px' }}>{t.error.title}</h2>
+          <p style={{ color: '#94a3b8', marginBottom: '20px' }}>{t.error.message}</p>
           <button
             onClick={() => window.location.reload()}
             style={{
@@ -284,7 +287,7 @@ export default function CensusDashboard() {
               fontSize: '14px'
             }}
           >
-            重新加载
+            {t.error.reload}
           </button>
         </div>
       </div>
@@ -381,17 +384,17 @@ export default function CensusDashboard() {
               🇺🇸
             </div>
             <div>
-              <h1 style={{ 
-                fontSize: '24px', 
+              <h1 style={{
+                fontSize: '24px',
                 fontWeight: '700',
                 background: 'linear-gradient(90deg, #f1f5f9 0%, #3b82f6 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
               }}>
-                U.S. Census 数据可视化
+                {t.title}
               </h1>
               <p style={{ color: '#64748b', fontSize: '13px' }}>
-                基于美国人口普查局公开数据 · 2024年更新
+                {t.subtitle}
               </p>
             </div>
           </div>
@@ -426,9 +429,33 @@ export default function CensusDashboard() {
           </nav>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ 
-              padding: '6px 12px', 
-              background: 'rgba(16, 185, 129, 0.2)', 
+            {/* Language Toggle Button */}
+            <button
+              onClick={toggleLanguage}
+              style={{
+                padding: '8px 16px',
+                background: 'rgba(59, 130, 246, 0.2)',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                borderRadius: '8px',
+                color: '#3b82f6',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(59, 130, 246, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'rgba(59, 130, 246, 0.2)';
+              }}
+            >
+              {language === 'en' ? '中文' : 'English'}
+            </button>
+
+            <span style={{
+              padding: '6px 12px',
+              background: 'rgba(16, 185, 129, 0.2)',
               color: '#10b981',
               borderRadius: '20px',
               fontSize: '12px',
@@ -438,7 +465,7 @@ export default function CensusDashboard() {
               gap: '6px'
             }}>
               <span style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
-              实时数据
+              {t.realTimeData}
             </span>
           </div>
         </div>
