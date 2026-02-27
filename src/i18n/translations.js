@@ -156,6 +156,20 @@ export const translations = {
       income: 'Income',
       employment: 'Employment (Millions)',
       growthRate: 'Growth Rate (%)'
+    },
+
+    // Legend Labels
+    legend: {
+      male: 'Male',
+      female: 'Female',
+      urbanizationRate: 'Urbanization Rate',
+      population: 'Population',
+      populationMillions: 'Population (Millions)',
+      year2024: '2024',
+      employmentMillions: 'Employment (Millions)',
+      forecastGrowth: 'Forecast Growth',
+      medianIncome: 'Median Income',
+      newPopMillions: 'New Population (Millions)'
     }
   },
 
@@ -316,6 +330,20 @@ export const translations = {
       income: '收入',
       employment: '就业人数 (百万)',
       growthRate: '增长率 (%)'
+    },
+
+    // Legend Labels
+    legend: {
+      male: '男性',
+      female: '女性',
+      urbanizationRate: '城镇化率',
+      population: '人口',
+      populationMillions: '人口(百万)',
+      year2024: '2024年',
+      employmentMillions: '就业人数(百万)',
+      forecastGrowth: '预测增长率',
+      medianIncome: '收入中位数',
+      newPopMillions: '新增人口(百万)'
     }
   }
 };

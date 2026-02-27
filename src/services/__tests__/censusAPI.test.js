@@ -131,9 +131,9 @@ describe('Census API Service', () => {
       const result = await getRaceData();
 
       expect(result).toHaveLength(5);
-      expect(result[0].name).toBe('白人');
+      expect(result[0].key).toBe('white');
       expect(result[0].value).toBe(57.8);
-      expect(result[1].name).toBe('拉丁裔');
+      expect(result[1].key).toBe('hispanic');
       expect(result[1].value).toBe(19.1);
 
       // Check that percentages sum to 100

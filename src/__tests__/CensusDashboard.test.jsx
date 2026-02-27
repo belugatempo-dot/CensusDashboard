@@ -33,9 +33,9 @@ describe('CensusDashboard Component', () => {
   ];
 
   const mockRaceData = [
-    { name: '白人', value: 57.8, color: '#3b82f6' },
-    { name: '拉丁裔', value: 19.1, color: '#f59e0b' },
-    { name: '非裔', value: 12.4, color: '#10b981' }
+    { key: 'white', value: 57.8, color: '#3b82f6' },
+    { key: 'hispanic', value: 19.1, color: '#f59e0b' },
+    { key: 'black', value: 12.4, color: '#10b981' }
   ];
 
   beforeEach(() => {

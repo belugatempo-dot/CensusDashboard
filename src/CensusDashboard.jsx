@@ -3,31 +3,30 @@ import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, X
 import { getAllStatesData, getAgeDistribution, getRaceData, getHistoricalPopulation } from './services/censusAPI';
 import { useLanguage } from './i18n/useLanguage';
 
-// 行业就业数据 (保持静态数据 - Census API 没有直接提供此数据)
-const industryData = [
-  { industry: '医疗保健', employment: 22.1, growth: 13.0 },
-  { industry: '零售贸易', employment: 15.2, growth: -2.1 },
-  { industry: '专业服务', employment: 14.8, growth: 8.5 },
-  { industry: '住宿餐饮', employment: 13.5, growth: 5.2 },
-  { industry: '制造业', employment: 12.9, growth: -1.5 },
-  { industry: '建筑业', employment: 8.1, growth: 4.3 },
-  { industry: '金融保险', employment: 7.2, growth: 3.8 },
-  { industry: '信息技术', employment: 3.2, growth: 11.2 },
+// Industry employment data (static - Census API doesn't provide this directly)
+const industryDataKeys = [
+  { key: 'healthcare', employment: 22.1, growth: 13.0 },
+  { key: 'retail', employment: 15.2, growth: -2.1 },
+  { key: 'professional', employment: 14.8, growth: 8.5 },
+  { key: 'hospitality', employment: 13.5, growth: 5.2 },
+  { key: 'manufacturing', employment: 12.9, growth: -1.5 },
+  { key: 'construction', employment: 8.1, growth: 4.3 },
+  { key: 'finance', employment: 7.2, growth: 3.8 },
+  { key: 'tech', employment: 3.2, growth: 11.2 },
 ];
 
-// 历史人口趋势 - now fetched from API (getHistoricalPopulation)
-
-// 经济指标雷达图数据
-const economicRadarData = [
-  { subject: 'GDP增长', A: 85, fullMark: 100 },
-  { subject: '就业率', A: 92, fullMark: 100 },
-  { subject: '消费信心', A: 78, fullMark: 100 },
-  { subject: '房产市场', A: 65, fullMark: 100 },
-  { subject: '制造业PMI', A: 71, fullMark: 100 },
-  { subject: '通胀控制', A: 68, fullMark: 100 },
+// Economic indicators radar chart data
+const economicRadarDataKeys = [
+  { key: 'gdpGrowth', A: 85, fullMark: 100 },
+  { key: 'employment', A: 92, fullMark: 100 },
+  { key: 'consumerConfidence', A: 78, fullMark: 100 },
+  { key: 'housingMarket', A: 65, fullMark: 100 },
+  { key: 'manufacturingPMI', A: 71, fullMark: 100 },
+  { key: 'inflationControl', A: 68, fullMark: 100 },
 ];
 
-const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#84cc16'];
+// Census Bureau official color palette
+const CENSUS_COLORS = ['#4472C4', '#5B9BD5', '#70AD47', '#FFC000', '#C55A11', '#9E480E', '#7030A0', '#ED7D31'];
 
 const formatNumber = (num) => {
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -39,24 +38,24 @@ const formatCurrency = (num) => {
   return '$' + num.toLocaleString();
 };
 
-// 自定义Tooltip组件
+// Light theme tooltip
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div style={{
-        background: 'rgba(15, 23, 42, 0.95)',
-        border: '1px solid rgba(59, 130, 246, 0.5)',
-        borderRadius: '8px',
+        background: '#fff',
+        border: '1px solid #ddd',
+        borderRadius: '4px',
         padding: '12px 16px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.3)'
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
       }}>
-        <p style={{ color: '#94a3b8', marginBottom: '8px', fontWeight: '600' }}>{label}</p>
+        <p style={{ color: '#333', marginBottom: '6px', fontWeight: '600', fontSize: '13px' }}>{label}</p>
         {payload.map((entry, index) => (
-          <p key={index} style={{ color: entry.color, margin: '4px 0', fontSize: '14px' }}>
-            {entry.name}: {typeof entry.value === 'number' && entry.value > 10000 
-              ? formatNumber(entry.value) 
+          <p key={index} style={{ color: entry.color, margin: '4px 0', fontSize: '13px' }}>
+            {entry.name}: {typeof entry.value === 'number' && entry.value > 10000
+              ? formatNumber(entry.value)
               : entry.value}
-            {entry.name?.includes('增长') || entry.name?.includes('率') ? '%' : ''}
+            {entry.name?.includes('增长') || entry.name?.includes('率') || entry.name?.toLowerCase().includes('growth') || entry.name?.toLowerCase().includes('rate') ? '%' : ''}
           </p>
         ))}
       </div>
@@ -65,99 +64,95 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-// 统计卡片组件
-const StatCard = ({ title, value, subtitle, trend, icon }) => (
+// Census Bureau style stat card with left border
+const StatCard = ({ title, value, subtitle, difference, differenceLabel, color, trend }) => (
   <div style={{
-    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%)',
-    borderRadius: '16px',
-    padding: '24px',
-    border: '1px solid rgba(59, 130, 246, 0.2)',
-    position: 'relative',
-    overflow: 'hidden',
-    transition: 'all 0.3s ease',
+    background: '#fff',
+    borderRadius: '2px',
+    borderLeft: `5px solid ${color}`,
+    padding: '20px 24px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    height: '100%',
+    transition: 'box-shadow 0.2s ease',
   }}
-  className="stat-card"
+  className="census-card"
   >
-    <div style={{
-      position: 'absolute',
-      top: '-20px',
-      right: '-20px',
-      width: '100px',
-      height: '100px',
-      background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)',
-      borderRadius: '50%',
-    }} />
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <div>
-        <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '1px' }}>
-          {title}
-        </p>
-        <h3 style={{ 
-          color: '#f1f5f9', 
-          fontSize: '32px', 
-          fontWeight: '700', 
-          marginBottom: '4px',
-          fontFamily: "'JetBrains Mono', monospace"
-        }}>
-          {value}
-        </h3>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {trend && (
-            <span style={{ 
-              color: trend > 0 ? '#10b981' : '#ef4444',
-              fontSize: '14px',
-              fontWeight: '600'
-            }}>
-              {trend > 0 ? '↑' : '↓'} {Math.abs(trend)}%
-            </span>
-          )}
-          <span style={{ color: '#64748b', fontSize: '13px' }}>{subtitle}</span>
-        </div>
-      </div>
-      <div style={{
-        width: '48px',
-        height: '48px',
-        background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-        borderRadius: '12px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '24px'
+    <div style={{ marginBottom: '8px' }}>
+      <p style={{ color: '#666', fontSize: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+        {title}
+      </p>
+    </div>
+    <div style={{ marginBottom: '8px' }}>
+      <h3 style={{
+        color: '#000',
+        fontSize: '36px',
+        fontWeight: '700',
+        fontFamily: "'Arial', sans-serif",
+        lineHeight: '1.2'
       }}>
-        {icon}
-      </div>
+        {value}
+      </h3>
+    </div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+      {difference !== undefined && (
+        <span style={{
+          color: trend === 'up' ? '#10b981' : trend === 'down' ? '#ef4444' : '#666',
+          fontSize: '16px',
+          fontWeight: '700'
+        }}>
+          {trend === 'up' ? '↑' : trend === 'down' ? '↓' : '–'} {difference}
+        </span>
+      )}
+      {differenceLabel && (
+        <span style={{ color: '#666', fontSize: '11px', fontWeight: '600' }}>
+          {differenceLabel}
+        </span>
+      )}
+    </div>
+    <div>
+      <p style={{ color: '#888', fontSize: '11px' }}>{subtitle}</p>
     </div>
   </div>
 );
 
-// 图表容器组件
-const ChartContainer = ({ title, children, subtitle }) => (
+// Census-style chart container
+const ChartContainer = ({ title, subtitle, children }) => (
   <div style={{
-    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%)',
-    borderRadius: '20px',
+    background: '#fff',
+    borderRadius: '2px',
     padding: '24px',
-    border: '1px solid rgba(59, 130, 246, 0.15)',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
     height: '100%',
   }}>
     <div style={{ marginBottom: '20px' }}>
-      <h3 style={{ 
-        color: '#f1f5f9', 
-        fontSize: '18px', 
-        fontWeight: '600',
+      <h3 style={{
+        color: '#000',
+        fontSize: '18px',
+        fontWeight: '700',
         marginBottom: '4px'
       }}>
         {title}
       </h3>
-      {subtitle && <p style={{ color: '#64748b', fontSize: '13px' }}>{subtitle}</p>}
+      {subtitle && <p style={{ color: '#666', fontSize: '12px' }}>{subtitle}</p>}
     </div>
     {children}
   </div>
 );
 
-// 主应用
+// Main application
 export default function CensusDashboard() {
-  // Language support
   const { language, toggleLanguage, t } = useLanguage();
+
+  // Translate static data based on current language
+  const industryData = industryDataKeys.map(item => ({
+    ...item,
+    industry: t.industries[item.key]
+  }));
+
+  const economicRadarData = economicRadarDataKeys.map(item => ({
+    ...item,
+    subject: t.economic[item.key]
+  }));
 
   const [activeTab, setActiveTab] = useState('overview');
   const [selectedState, setSelectedState] = useState(null);
@@ -170,6 +165,12 @@ export default function CensusDashboard() {
   const [populationTrendData, setPopulationTrendData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // Translate race data based on current language
+  const translatedRaceData = raceData.map(item => ({
+    ...item,
+    name: t.race[item.key]
+  }));
 
   useEffect(() => {
     setAnimationKey(prev => prev + 1);
@@ -195,7 +196,7 @@ export default function CensusDashboard() {
         setPopulationTrendData(historicalData);
       } catch (err) {
         console.error('Failed to fetch Census data:', err);
-        setError('无法加载 Census 数据。请检查 API 密钥配置或稍后重试。');
+        setError(t.error.message);
       } finally {
         setLoading(false);
       }
@@ -216,7 +217,7 @@ export default function CensusDashboard() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)',
+        background: '#f5f5f5',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -226,8 +227,8 @@ export default function CensusDashboard() {
         <div style={{
           width: '60px',
           height: '60px',
-          border: '4px solid rgba(59, 130, 246, 0.2)',
-          borderTop: '4px solid #3b82f6',
+          border: '4px solid #ddd',
+          borderTop: '4px solid #4472C4',
           borderRadius: '50%',
           animation: 'spin 1s linear infinite'
         }} />
@@ -237,7 +238,7 @@ export default function CensusDashboard() {
             100% { transform: rotate(360deg); }
           }
         `}</style>
-        <p style={{ color: '#94a3b8', fontSize: '16px' }}>{t.loading}</p>
+        <p style={{ color: '#666', fontSize: '16px' }}>{t.loading}</p>
       </div>
     );
   }
@@ -247,32 +248,31 @@ export default function CensusDashboard() {
     return (
       <div style={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)',
+        background: '#f5f5f5',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        flexDirection: 'column',
-        gap: '20px',
         padding: '20px'
       }}>
         <div style={{
-          background: 'rgba(239, 68, 68, 0.1)',
-          border: '1px solid rgba(239, 68, 68, 0.3)',
-          borderRadius: '12px',
+          background: '#fff',
+          border: '1px solid #fee',
+          borderRadius: '4px',
           padding: '32px',
           maxWidth: '500px',
-          textAlign: 'center'
+          textAlign: 'center',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
         }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
           <h2 style={{ color: '#ef4444', marginBottom: '12px' }}>{t.error.title}</h2>
-          <p style={{ color: '#94a3b8', marginBottom: '20px' }}>{t.error.message}</p>
+          <p style={{ color: '#666', marginBottom: '20px' }}>{error}</p>
           <button
             onClick={() => window.location.reload()}
             style={{
               padding: '12px 24px',
-              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+              background: '#4472C4',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '4px',
               color: '#fff',
               fontWeight: '600',
               cursor: 'pointer',
@@ -289,244 +289,199 @@ export default function CensusDashboard() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%)',
-      fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-      color: '#e2e8f0',
+      background: '#f5f5f5',
+      fontFamily: "'Arial', -apple-system, BlinkMacSystemFont, sans-serif",
+      color: '#333',
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
-        
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        .stat-card:hover {
-          transform: translateY(-4px);
-          border-color: rgba(59, 130, 246, 0.4);
-          box-shadow: 0 8px 30px rgba(59, 130, 246, 0.15);
+
+        .census-card:hover {
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
-        
+
         .tab-button {
-          transition: all 0.3s ease;
+          transition: all 0.2s ease;
         }
-        
+
         .tab-button:hover {
-          background: rgba(59, 130, 246, 0.15) !important;
+          background: #e8e8e8 !important;
         }
-        
+
         .data-row:hover {
-          background: rgba(59, 130, 246, 0.1) !important;
+          background: #f8f9fa !important;
         }
-        
+
         @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(20px); }
+          from { opacity: 0; transform: translateY(10px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.7; }
-        }
-        
+
         .animate-in {
-          animation: fadeInUp 0.5s ease forwards;
+          animation: fadeInUp 0.3s ease forwards;
         }
-        
+
         ::-webkit-scrollbar {
           width: 8px;
           height: 8px;
         }
-        
+
         ::-webkit-scrollbar-track {
-          background: rgba(30, 41, 59, 0.5);
-          border-radius: 4px;
+          background: #f1f1f1;
         }
-        
+
         ::-webkit-scrollbar-thumb {
-          background: rgba(59, 130, 246, 0.5);
+          background: #ccc;
           border-radius: 4px;
         }
-        
+
         ::-webkit-scrollbar-thumb:hover {
-          background: rgba(59, 130, 246, 0.7);
+          background: #aaa;
         }
       `}</style>
 
       {/* Header */}
       <header style={{
-        background: 'rgba(15, 23, 42, 0.8)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid rgba(59, 130, 246, 0.2)',
+        background: '#fff',
+        borderBottom: '3px solid #4472C4',
         padding: '16px 32px',
         position: 'sticky',
         top: 0,
         zIndex: 100,
+        boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
       }}>
-        <div style={{ maxWidth: '1600px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
-              width: '48px',
-              height: '48px',
-              background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '24px',
-              fontWeight: 'bold',
+              padding: '8px 12px',
+              background: '#003C71',
+              color: '#fff',
+              fontSize: '14px',
+              fontWeight: '700',
             }}>
-              🇺🇸
+              U.S. CENSUS BUREAU
             </div>
             <div>
               <h1 style={{
-                fontSize: '24px',
+                fontSize: '20px',
                 fontWeight: '700',
-                background: 'linear-gradient(90deg, #f1f5f9 0%, #3b82f6 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+                color: '#000',
               }}>
                 {t.title}
               </h1>
-              <p style={{ color: '#64748b', fontSize: '13px' }}>
+              <p style={{ color: '#666', fontSize: '11px' }}>
                 {t.subtitle}
               </p>
             </div>
           </div>
-          
+
           {/* Navigation Tabs */}
-          <nav style={{ display: 'flex', gap: '8px', background: 'rgba(30, 41, 59, 0.5)', padding: '6px', borderRadius: '12px' }}>
+          <nav style={{ display: 'flex', gap: '4px' }}>
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className="tab-button"
                 style={{
-                  padding: '10px 20px',
-                  borderRadius: '8px',
+                  padding: '8px 16px',
                   border: 'none',
+                  borderBottom: activeTab === tab.id ? '3px solid #4472C4' : '3px solid transparent',
                   cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  background: activeTab === tab.id 
-                    ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' 
-                    : 'transparent',
-                  color: activeTab === tab.id ? '#fff' : '#94a3b8',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  background: activeTab === tab.id ? '#f8f9fa' : 'transparent',
+                  color: activeTab === tab.id ? '#4472C4' : '#666',
                 }}
               >
-                <span>{tab.icon}</span>
                 {tab.label}
               </button>
             ))}
           </nav>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Language Toggle Button */}
-            <button
-              onClick={toggleLanguage}
-              style={{
-                padding: '8px 16px',
-                background: 'rgba(59, 130, 246, 0.2)',
-                border: '1px solid rgba(59, 130, 246, 0.3)',
-                borderRadius: '8px',
-                color: '#3b82f6',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background = 'rgba(59, 130, 246, 0.3)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = 'rgba(59, 130, 246, 0.2)';
-              }}
-            >
-              {language === 'en' ? '中文' : 'English'}
-            </button>
-
-            <span style={{
+          <button
+            onClick={toggleLanguage}
+            style={{
               padding: '6px 12px',
-              background: 'rgba(16, 185, 129, 0.2)',
-              color: '#10b981',
-              borderRadius: '20px',
+              background: 'transparent',
+              border: '1px solid #4472C4',
+              borderRadius: '3px',
+              color: '#4472C4',
               fontSize: '12px',
               fontWeight: '600',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px'
-            }}>
-              <span style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '50%', animation: 'pulse 2s infinite' }} />
-              {t.realTimeData}
-            </span>
-          </div>
+              cursor: 'pointer',
+            }}
+          >
+            {language === 'en' ? '中文' : 'English'}
+          </button>
         </div>
       </header>
 
       {/* Main Content */}
-      <main style={{ maxWidth: '1600px', margin: '0 auto', padding: '32px' }} key={animationKey}>
-        
+      <main style={{ maxWidth: '1400px', margin: '0 auto', padding: '24px' }} key={animationKey}>
+
         {/* Overview Tab */}
         {activeTab === 'overview' && (
           <div className="animate-in">
             {/* Stats Grid */}
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(4, 1fr)', 
-              gap: '24px',
-              marginBottom: '32px'
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '16px',
+              marginBottom: '24px'
             }}>
               <StatCard
                 title={t.statCards.totalPopulation}
                 value="336.0M"
+                difference="0.5%"
+                differenceLabel="vs 2023"
                 subtitle={t.statCards.estimate2024}
-                trend={0.5}
-                icon="👥"
+                color="#4472C4"
+                trend="up"
               />
               <StatCard
                 title={t.statCards.medianIncome}
                 value="$83,730"
+                difference="2.1%"
+                differenceLabel="vs 2023"
                 subtitle={t.statCards.annualData}
-                trend={2.1}
-                icon="💵"
+                color="#5B9BD5"
+                trend="up"
               />
               <StatCard
                 title={t.statCards.unemploymentRate}
                 value="3.9%"
+                difference="0.3%"
+                differenceLabel="vs Q3 2024"
                 subtitle={t.statCards.quarterlyUpdate}
-                trend={-0.3}
-                icon="📉"
+                color="#70AD47"
+                trend="down"
               />
               <StatCard
                 title={t.statCards.urbanization}
                 value="84%"
+                difference="0.8%"
+                differenceLabel="vs 2023"
                 subtitle={t.statCards.continuousGrowth}
-                trend={0.8}
-                icon="🏙️"
+                color="#FFC000"
+                trend="up"
               />
             </div>
 
             {/* Charts Row 1 */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <ChartContainer title={t.charts.stateRanking} subtitle={t.charts.censusSource}>
                 <ResponsiveContainer width="100%" height={350}>
-                  <BarChart data={statePopulationData} layout="vertical" margin={{ left: 20, right: 30 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                    <XAxis type="number" tickFormatter={formatNumber} stroke="#64748b" fontSize={12} />
-                    <YAxis type="category" dataKey="abbr" stroke="#64748b" fontSize={12} width={40} />
+                  <BarChart data={statePopulationData} layout="vertical" margin={{ left: 20, right: 30, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                    <XAxis type="number" tickFormatter={formatNumber} stroke="#666" fontSize={11} />
+                    <YAxis type="category" dataKey="abbr" stroke="#666" fontSize={11} width={40} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar 
-                      dataKey="population" 
-                      name="人口"
-                      radius={[0, 6, 6, 0]}
-                      fill="url(#blueGradient)"
+                    <Bar
+                      dataKey="population"
+                      name={t.legend.population}
+                      radius={[0, 4, 4, 0]}
+                      fill="#4472C4"
                     />
-                    <defs>
-                      <linearGradient id="blueGradient" x1="0" y1="0" x2="1" y2="0">
-                        <stop offset="0%" stopColor="#3b82f6" />
-                        <stop offset="100%" stopColor="#8b5cf6" />
-                      </linearGradient>
-                    </defs>
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -535,49 +490,49 @@ export default function CensusDashboard() {
                 <ResponsiveContainer width="100%" height={350}>
                   <PieChart>
                     <Pie
-                      data={raceData}
+                      data={translatedRaceData}
                       cx="50%"
                       cy="50%"
                       innerRadius={60}
                       outerRadius={100}
-                      paddingAngle={3}
+                      paddingAngle={2}
                       dataKey="value"
-                      label={({ name, value }) => `${name} ${value}%`}
-                      labelLine={{ stroke: '#64748b' }}
+                      label={({ value }) => `${value}%`}
                     >
-                      {raceData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      {translatedRaceData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={CENSUS_COLORS[index]} />
                       ))}
                     </Pie>
                     <Tooltip content={<CustomTooltip />} />
+                    <Legend />
                   </PieChart>
                 </ResponsiveContainer>
               </ChartContainer>
             </div>
 
             {/* Charts Row 2 */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <ChartContainer title={t.charts.populationTrend} subtitle={t.charts.historicalData}>
                 <ResponsiveContainer width="100%" height={300}>
                   <AreaChart data={populationTrendData}>
                     <defs>
                       <linearGradient id="colorPop" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#5B9BD5" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#5B9BD5" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                    <XAxis dataKey="year" stroke="#64748b" fontSize={12} />
-                    <YAxis stroke="#64748b" fontSize={12} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                    <XAxis dataKey="year" stroke="#666" fontSize={11} />
+                    <YAxis stroke="#666" fontSize={11} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Area 
-                      type="monotone" 
-                      dataKey="population" 
-                      name="人口(百万)"
-                      stroke="#3b82f6" 
-                      strokeWidth={3}
-                      fillOpacity={1} 
-                      fill="url(#colorPop)" 
+                    <Area
+                      type="monotone"
+                      dataKey="population"
+                      name={t.legend.populationMillions}
+                      stroke="#5B9BD5"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#colorPop)"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -586,15 +541,15 @@ export default function CensusDashboard() {
               <ChartContainer title={t.charts.economicHealth} subtitle={t.charts.fullScore}>
                 <ResponsiveContainer width="100%" height={300}>
                   <RadarChart data={economicRadarData}>
-                    <PolarGrid stroke="rgba(148, 163, 184, 0.2)" />
-                    <PolarAngleAxis dataKey="subject" stroke="#94a3b8" fontSize={12} />
-                    <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#64748b" fontSize={10} />
-                    <Radar 
-                      name="2024年" 
-                      dataKey="A" 
-                      stroke="#10b981" 
-                      fill="#10b981" 
-                      fillOpacity={0.3}
+                    <PolarGrid stroke="#e0e0e0" />
+                    <PolarAngleAxis dataKey="subject" stroke="#666" fontSize={11} />
+                    <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#666" fontSize={10} />
+                    <Radar
+                      name={t.legend.year2024}
+                      dataKey="A"
+                      stroke="#70AD47"
+                      fill="#70AD47"
+                      fillOpacity={0.4}
                       strokeWidth={2}
                     />
                     <Tooltip content={<CustomTooltip />} />
@@ -608,17 +563,17 @@ export default function CensusDashboard() {
         {/* Population Tab */}
         {activeTab === 'population' && (
           <div className="animate-in">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <ChartContainer title={t.charts.ageDistribution} subtitle={t.charts.byGender}>
                 <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={ageDistributionData} margin={{ left: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                    <XAxis dataKey="age" stroke="#64748b" fontSize={12} />
-                    <YAxis stroke="#64748b" fontSize={12} />
+                  <BarChart data={ageDistributionData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                    <XAxis dataKey="age" stroke="#666" fontSize={11} />
+                    <YAxis stroke="#666" fontSize={11} />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
-                    <Bar dataKey="male" name="男性" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="female" name="女性" fill="#ec4899" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="male" name={t.legend.male} fill="#4472C4" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="female" name={t.legend.female} fill="#C55A11" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -626,18 +581,17 @@ export default function CensusDashboard() {
               <ChartContainer title={t.charts.urbanizationTrend} subtitle={t.charts.urbanPercent}>
                 <ResponsiveContainer width="100%" height={400}>
                   <LineChart data={populationTrendData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                    <XAxis dataKey="year" stroke="#64748b" fontSize={12} />
-                    <YAxis domain={[60, 90]} stroke="#64748b" fontSize={12} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                    <XAxis dataKey="year" stroke="#666" fontSize={11} />
+                    <YAxis domain={[70, 90]} stroke="#666" fontSize={11} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Line 
-                      type="monotone" 
-                      dataKey="urban" 
-                      name="城镇化率"
-                      stroke="#f59e0b" 
+                    <Line
+                      type="monotone"
+                      dataKey="urban"
+                      name={t.legend.urbanizationRate}
+                      stroke="#FFC000"
                       strokeWidth={3}
-                      dot={{ fill: '#f59e0b', strokeWidth: 2, r: 5 }}
-                      activeDot={{ r: 8, fill: '#f59e0b' }}
+                      dot={{ fill: '#FFC000', r: 4 }}
                     />
                   </LineChart>
                 </ResponsiveContainer>
@@ -649,73 +603,55 @@ export default function CensusDashboard() {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr style={{ borderBottom: '2px solid rgba(59, 130, 246, 0.3)' }}>
-                      <th style={{ padding: '16px', textAlign: 'left', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>{t.table.state}</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>{t.table.population}</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>{t.table.growthRate}</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>{t.table.medianIncome}</th>
-                      <th style={{ padding: '16px', textAlign: 'right', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>{t.table.unemploymentRate}</th>
-                      <th style={{ padding: '16px', textAlign: 'center', color: '#94a3b8', fontWeight: '600', fontSize: '13px' }}>{t.table.status}</th>
+                    <tr style={{ borderBottom: '2px solid #ddd', background: '#f8f9fa' }}>
+                      <th style={{ padding: '12px', textAlign: 'left', color: '#333', fontWeight: '700', fontSize: '12px' }}>{t.table.state}</th>
+                      <th style={{ padding: '12px', textAlign: 'right', color: '#333', fontWeight: '700', fontSize: '12px' }}>{t.table.population}</th>
+                      <th style={{ padding: '12px', textAlign: 'right', color: '#333', fontWeight: '700', fontSize: '12px' }}>{t.table.growthRate}</th>
+                      <th style={{ padding: '12px', textAlign: 'right', color: '#333', fontWeight: '700', fontSize: '12px' }}>{t.table.medianIncome}</th>
+                      <th style={{ padding: '12px', textAlign: 'right', color: '#333', fontWeight: '700', fontSize: '12px' }}>{t.table.unemploymentRate}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {statePopulationData.map((state, index) => (
-                      <tr 
+                      <tr
                         key={state.abbr}
                         className="data-row"
-                        style={{ 
-                          borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+                        style={{
+                          borderBottom: '1px solid #eee',
                           cursor: 'pointer',
-                          transition: 'background 0.2s'
                         }}
-                        onClick={() => setSelectedState(state)}
                       >
-                        <td style={{ padding: '16px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <span style={{ 
-                              width: '32px', 
-                              height: '32px', 
-                              background: `linear-gradient(135deg, ${COLORS[index % COLORS.length]} 0%, ${COLORS[(index + 1) % COLORS.length]} 100%)`,
-                              borderRadius: '8px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
+                        <td style={{ padding: '12px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{
+                              padding: '4px 8px',
+                              background: CENSUS_COLORS[index % CENSUS_COLORS.length],
+                              color: '#fff',
+                              borderRadius: '2px',
                               fontWeight: '700',
-                              fontSize: '12px'
+                              fontSize: '11px'
                             }}>
                               {state.abbr}
                             </span>
-                            <span style={{ color: '#f1f5f9', fontWeight: '500' }}>{state.state}</span>
+                            <span style={{ color: '#333', fontWeight: '500', fontSize: '13px' }}>{state.state}</span>
                           </div>
                         </td>
-                        <td style={{ padding: '16px', textAlign: 'right', color: '#e2e8f0', fontFamily: "'JetBrains Mono', monospace" }}>
+                        <td style={{ padding: '12px', textAlign: 'right', color: '#333', fontSize: '13px' }}>
                           {formatNumber(state.population)}
                         </td>
-                        <td style={{ padding: '16px', textAlign: 'right' }}>
-                          <span style={{ 
-                            color: state.growth > 0 ? '#10b981' : state.growth < 0 ? '#ef4444' : '#94a3b8',
+                        <td style={{ padding: '12px', textAlign: 'right', fontSize: '13px' }}>
+                          <span style={{
+                            color: state.growth > 0 ? '#10b981' : '#ef4444',
                             fontWeight: '600'
                           }}>
                             {state.growth > 0 ? '+' : ''}{state.growth}%
                           </span>
                         </td>
-                        <td style={{ padding: '16px', textAlign: 'right', color: '#e2e8f0', fontFamily: "'JetBrains Mono', monospace" }}>
+                        <td style={{ padding: '12px', textAlign: 'right', color: '#333', fontSize: '13px' }}>
                           {formatCurrency(state.medianIncome)}
                         </td>
-                        <td style={{ padding: '16px', textAlign: 'right', color: '#e2e8f0' }}>
+                        <td style={{ padding: '12px', textAlign: 'right', color: '#333', fontSize: '13px' }}>
                           {state.unemployment}%
-                        </td>
-                        <td style={{ padding: '16px', textAlign: 'center' }}>
-                          <span style={{
-                            padding: '4px 12px',
-                            borderRadius: '20px',
-                            fontSize: '12px',
-                            fontWeight: '600',
-                            background: state.growth > 1 ? 'rgba(16, 185, 129, 0.2)' : state.growth > 0 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                            color: state.growth > 1 ? '#10b981' : state.growth > 0 ? '#f59e0b' : '#ef4444',
-                          }}>
-                            {state.growth > 1 ? t.table.rapidGrowth : state.growth > 0 ? t.table.slowGrowth : t.table.populationLoss}
-                          </span>
                         </td>
                       </tr>
                     ))}
@@ -729,57 +665,65 @@ export default function CensusDashboard() {
         {/* Economy Tab */}
         {activeTab === 'economy' && (
           <div className="animate-in">
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: 'repeat(4, 1fr)', 
-              gap: '24px',
-              marginBottom: '32px'
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '16px',
+              marginBottom: '24px'
             }}>
-              <StatCard 
-                title="GDP总量" 
-                value="$27.36T" 
-                subtitle="2024年估计"
-                trend={2.5}
-                icon="💹"
+              <StatCard
+                title="GDP Total"
+                value="$27.36T"
+                difference="2.5%"
+                differenceLabel="Annual Growth"
+                subtitle="2024 Estimate"
+                color="#4472C4"
+                trend="up"
               />
-              <StatCard 
-                title="劳动参与率" 
-                value="62.5%" 
-                subtitle="16岁以上"
-                trend={0.2}
-                icon="👷"
+              <StatCard
+                title="Labor Force Participation"
+                value="62.5%"
+                difference="0.2%"
+                differenceLabel="vs 2023"
+                subtitle="Ages 16+"
+                color="#70AD47"
+                trend="up"
               />
-              <StatCard 
-                title="CPI通胀率" 
-                value="2.9%" 
-                subtitle="年同比"
-                trend={-1.2}
-                icon="📊"
+              <StatCard
+                title="CPI Inflation"
+                value="2.9%"
+                difference="1.2%"
+                differenceLabel="vs 2023"
+                subtitle="Year-over-Year"
+                color="#C55A11"
+                trend="down"
               />
-              <StatCard 
-                title="新增就业" 
-                value="175K" 
-                subtitle="月度数据"
-                trend={5.3}
-                icon="📈"
+              <StatCard
+                title="Jobs Created"
+                value="175K"
+                difference="5.3%"
+                differenceLabel="Monthly Avg"
+                subtitle="Monthly Data"
+                color="#5B9BD5"
+                trend="up"
               />
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <ChartContainer title={t.charts.industryEmployment} subtitle={t.charts.employmentMillions}>
                 <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={industryData} layout="vertical" margin={{ left: 30, right: 30 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                    <XAxis type="number" stroke="#64748b" fontSize={12} />
-                    <YAxis type="category" dataKey="industry" stroke="#64748b" fontSize={11} width={80} />
+                  <BarChart data={industryData} layout="vertical" margin={{ left: 70, right: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                    <XAxis type="number" stroke="#666" fontSize={11} />
+                    <YAxis type="category" dataKey="industry" stroke="#666" fontSize={11} width={100} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar 
-                      dataKey="employment" 
-                      name="就业人数(百万)"
-                      radius={[0, 6, 6, 0]}
+                    <Bar
+                      dataKey="employment"
+                      name={t.legend.employmentMillions}
+                      radius={[0, 4, 4, 0]}
                     >
                       {industryData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={CENSUS_COLORS[index % CENSUS_COLORS.length]} />
                       ))}
                     </Bar>
                   </BarChart>
@@ -788,20 +732,20 @@ export default function CensusDashboard() {
 
               <ChartContainer title={t.charts.industryGrowth} subtitle={t.charts.next10Years}>
                 <ResponsiveContainer width="100%" height={400}>
-                  <BarChart data={industryData} margin={{ left: 30, right: 30 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                    <XAxis dataKey="industry" stroke="#64748b" fontSize={10} angle={-45} textAnchor="end" height={80} />
-                    <YAxis stroke="#64748b" fontSize={12} />
+                  <BarChart data={industryData} margin={{ bottom: 80 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                    <XAxis dataKey="industry" stroke="#666" fontSize={10} angle={-45} textAnchor="end" />
+                    <YAxis stroke="#666" fontSize={11} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Bar 
-                      dataKey="growth" 
-                      name="预测增长率"
-                      radius={[6, 6, 0, 0]}
+                    <Bar
+                      dataKey="growth"
+                      name={t.legend.forecastGrowth}
+                      radius={[4, 4, 0, 0]}
                     >
                       {industryData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={entry.growth > 0 ? '#10b981' : '#ef4444'} 
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.growth > 0 ? '#70AD47' : '#C55A11'}
                         />
                       ))}
                     </Bar>
@@ -812,36 +756,30 @@ export default function CensusDashboard() {
 
             <ChartContainer title={t.charts.incomeComparison} subtitle={t.charts.medianIncomeUSD}>
               <ResponsiveContainer width="100%" height={350}>
-                <BarChart data={statePopulationData} margin={{ bottom: 50 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                  <XAxis 
-                    dataKey="abbr" 
-                    stroke="#64748b" 
-                    fontSize={12}
+                <BarChart data={statePopulationData} margin={{ bottom: 60 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis
+                    dataKey="abbr"
+                    stroke="#666"
+                    fontSize={11}
                     angle={-45}
                     textAnchor="end"
                   />
-                  <YAxis 
-                    stroke="#64748b" 
-                    fontSize={12}
+                  <YAxis
+                    stroke="#666"
+                    fontSize={11}
                     tickFormatter={(value) => `$${(value/1000).toFixed(0)}K`}
                   />
-                  <Tooltip 
+                  <Tooltip
                     content={<CustomTooltip />}
                     formatter={(value) => formatCurrency(value)}
                   />
-                  <Bar 
-                    dataKey="medianIncome" 
-                    name="收入中位数"
-                    radius={[6, 6, 0, 0]}
-                    fill="url(#incomeGradient)"
+                  <Bar
+                    dataKey="medianIncome"
+                    name={t.legend.medianIncome}
+                    radius={[4, 4, 0, 0]}
+                    fill="#5B9BD5"
                   />
-                  <defs>
-                    <linearGradient id="incomeGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#10b981" />
-                      <stop offset="100%" stopColor="#059669" />
-                    </linearGradient>
-                  </defs>
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
@@ -851,20 +789,20 @@ export default function CensusDashboard() {
         {/* Demographics Tab */}
         {activeTab === 'demographics' && (
           <div className="animate-in">
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '24px', marginBottom: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
               <ChartContainer title={t.charts.raceDetails} subtitle={t.charts.populationPercent}>
                 <ResponsiveContainer width="100%" height={350}>
                   <PieChart>
                     <Pie
-                      data={raceData}
+                      data={translatedRaceData}
                       cx="50%"
                       cy="50%"
-                      outerRadius={120}
+                      outerRadius={100}
                       dataKey="value"
-                      label={({ name, value }) => `${value}%`}
+                      label={({ value }) => `${value}%`}
                     >
-                      {raceData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      {translatedRaceData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={CENSUS_COLORS[index]} />
                       ))}
                     </Pie>
                     <Tooltip content={<CustomTooltip />} />
@@ -883,57 +821,58 @@ export default function CensusDashboard() {
                     layout="vertical"
                     margin={{ left: 20, right: 20, bottom: 20 }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                     <XAxis
                       type="number"
-                      stroke="#64748b"
-                      fontSize={12}
+                      stroke="#666"
+                      fontSize={11}
                       domain={[-30, 30]}
-                      label={{ value: t.axis.population, position: 'bottom', style: { fill: '#94a3b8', fontSize: 13 } }}
                     />
                     <YAxis
                       type="category"
                       dataKey="age"
-                      stroke="#64748b"
+                      stroke="#666"
                       fontSize={11}
-                      label={{ value: t.axis.ageGroup, angle: -90, position: 'insideLeft', style: { fill: '#94a3b8', fontSize: 13 } }}
                     />
                     <Tooltip content={<CustomTooltip />} />
                     <Legend />
-                    <Bar dataKey="maleNeg" name="男性" fill="#3b82f6" radius={[6, 0, 0, 6]} />
-                    <Bar dataKey="female" name="女性" fill="#ec4899" radius={[0, 6, 6, 0]} />
+                    <Bar dataKey="maleNeg" name={t.legend.male} fill="#4472C4" />
+                    <Bar dataKey="female" name={t.legend.female} fill="#C55A11" />
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
 
               <ChartContainer title={t.charts.keyIndicators} subtitle={t.charts.populationData2024}>
-                <div style={{ padding: '20px' }}>
+                <div style={{ padding: '12px' }}>
                   {[
-                    { label: t.demographics.medianAge, value: `38.9 ${t.demographics.years}`, icon: '🎂' },
-                    { label: t.demographics.householdSize, value: `2.51 ${t.demographics.people}`, icon: '👨‍👩‍👧' },
-                    { label: t.demographics.over65, value: '17.3%', icon: '👴' },
-                    { label: t.demographics.under18, value: '21.7%', icon: '👶' },
-                    { label: t.demographics.foreignBorn, value: '14.3%', icon: '✈️' },
-                    { label: t.demographics.collegeEducated, value: '33.7%', icon: '🎓' },
+                    { label: t.demographics.medianAge, value: `38.9 ${t.demographics.years}`, color: '#4472C4' },
+                    { label: t.demographics.householdSize, value: `2.51 ${t.demographics.people}`, color: '#5B9BD5' },
+                    { label: t.demographics.over65, value: '17.3%', color: '#70AD47' },
+                    { label: t.demographics.under18, value: '21.7%', color: '#FFC000' },
+                    { label: t.demographics.foreignBorn, value: '14.3%', color: '#C55A11' },
+                    { label: t.demographics.collegeEducated, value: '33.7%', color: '#7030A0' },
                   ].map((item, index) => (
-                    <div 
+                    <div
                       key={index}
                       style={{
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        padding: '16px 0',
-                        borderBottom: index < 5 ? '1px solid rgba(148, 163, 184, 0.1)' : 'none'
+                        padding: '12px 0',
+                        borderBottom: index < 5 ? '1px solid #eee' : 'none'
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <span style={{ fontSize: '20px' }}>{item.icon}</span>
-                        <span style={{ color: '#94a3b8', fontSize: '14px' }}>{item.label}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                          width: '4px',
+                          height: '20px',
+                          background: item.color
+                        }} />
+                        <span style={{ color: '#333', fontSize: '13px', fontWeight: '500' }}>{item.label}</span>
                       </div>
-                      <span style={{ 
-                        color: '#f1f5f9', 
-                        fontWeight: '600',
-                        fontFamily: "'JetBrains Mono', monospace",
+                      <span style={{
+                        color: '#000',
+                        fontWeight: '700',
                         fontSize: '16px'
                       }}>
                         {item.value}
@@ -944,10 +883,10 @@ export default function CensusDashboard() {
               </ChartContainer>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
               <ChartContainer title={t.charts.populationChange} subtitle={t.charts.yearlyNewPop}>
                 <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart 
+                  <AreaChart
                     data={populationTrendData.map((d, i, arr) => ({
                       ...d,
                       change: i > 0 ? (d.population - arr[i-1].population).toFixed(1) : 0
@@ -955,74 +894,74 @@ export default function CensusDashboard() {
                   >
                     <defs>
                       <linearGradient id="colorChange" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4}/>
-                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                        <stop offset="5%" stopColor="#7030A0" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#7030A0" stopOpacity={0}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(148, 163, 184, 0.1)" />
-                    <XAxis dataKey="year" stroke="#64748b" fontSize={12} />
-                    <YAxis stroke="#64748b" fontSize={12} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                    <XAxis dataKey="year" stroke="#666" fontSize={11} />
+                    <YAxis stroke="#666" fontSize={11} />
                     <Tooltip content={<CustomTooltip />} />
-                    <Area 
-                      type="monotone" 
-                      dataKey="change" 
-                      name="新增人口(百万)"
-                      stroke="#8b5cf6" 
-                      strokeWidth={3}
-                      fillOpacity={1} 
-                      fill="url(#colorChange)" 
+                    <Area
+                      type="monotone"
+                      dataKey="change"
+                      name={t.legend.newPopMillions}
+                      stroke="#7030A0"
+                      strokeWidth={2}
+                      fillOpacity={1}
+                      fill="url(#colorChange)"
                     />
                   </AreaChart>
                 </ResponsiveContainer>
               </ChartContainer>
 
               <ChartContainer title={t.charts.dataSources} subtitle={t.charts.censusDatasets}>
-                <div style={{ padding: '16px' }}>
+                <div style={{ padding: '12px' }}>
                   {[
-                    { name: 'American Community Survey', year: '2024' },
-                    { name: 'Decennial Census', year: '2020' },
-                    { name: 'Population Estimates', year: '2024' },
-                    { name: 'Current Population Survey', year: '2024' },
-                    { name: 'County Business Patterns', year: '2023' },
+                    { name: 'American Community Survey', year: '2024', color: '#4472C4' },
+                    { name: 'Decennial Census', year: '2020', color: '#5B9BD5' },
+                    { name: 'Population Estimates', year: '2024', color: '#70AD47' },
+                    { name: 'Current Population Survey', year: '2024', color: '#FFC000' },
+                    { name: 'County Business Patterns', year: '2023', color: '#C55A11' },
                   ].map((source, index) => (
-                    <div 
+                    <div
                       key={index}
                       style={{
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center',
-                        padding: '12px',
-                        marginBottom: '8px',
-                        background: 'rgba(59, 130, 246, 0.1)',
-                        borderRadius: '8px',
-                        border: '1px solid rgba(59, 130, 246, 0.2)'
+                        padding: '10px',
+                        marginBottom: '6px',
+                        background: '#f8f9fa',
+                        borderLeft: `4px solid ${source.color}`,
+                        borderRadius: '2px'
                       }}
                     >
-                      <span style={{ color: '#e2e8f0', fontSize: '13px' }}>{source.name}</span>
-                      <span style={{ 
-                        color: '#3b82f6', 
-                        fontSize: '12px',
+                      <span style={{ color: '#333', fontSize: '12px', fontWeight: '500' }}>{source.name}</span>
+                      <span style={{
+                        color: '#666',
+                        fontSize: '11px',
                         fontWeight: '600'
                       }}>
                         {source.year}
                       </span>
                     </div>
                   ))}
-                  <a 
-                    href="https://data.census.gov" 
+                  <a
+                    href="https://data.census.gov"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
                       display: 'block',
                       textAlign: 'center',
-                      padding: '12px',
-                      marginTop: '16px',
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                      borderRadius: '8px',
+                      padding: '10px',
+                      marginTop: '12px',
+                      background: '#4472C4',
+                      borderRadius: '2px',
                       color: '#fff',
                       textDecoration: 'none',
                       fontWeight: '600',
-                      fontSize: '14px'
+                      fontSize: '12px'
                     }}
                   >
                     {t.sources.visit} →
@@ -1036,24 +975,22 @@ export default function CensusDashboard() {
 
       {/* Footer */}
       <footer style={{
-        background: 'rgba(15, 23, 42, 0.8)',
-        borderTop: '1px solid rgba(59, 130, 246, 0.2)',
-        padding: '24px 32px',
-        marginTop: '48px'
+        background: '#fff',
+        borderTop: '1px solid #ddd',
+        padding: '20px 32px',
+        marginTop: '32px'
       }}>
-        <div style={{ 
-          maxWidth: '1600px', 
+        <div style={{
+          maxWidth: '1400px',
           margin: '0 auto',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          fontSize: '11px',
+          color: '#666'
         }}>
-          <p style={{ color: '#64748b', fontSize: '13px' }}>
-            {t.footer.dataSource}
-          </p>
-          <p style={{ color: '#64748b', fontSize: '13px' }}>
-            {t.footer.builtWith}
-          </p>
+          <p>{t.footer.dataSource}</p>
+          <p>{t.footer.builtWith}</p>
         </div>
       </footer>
     </div>

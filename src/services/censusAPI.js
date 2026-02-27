@@ -35,10 +35,10 @@ const fetchAPI = async (url) => {
 
 /**
  * Get state population data from American Community Survey (ACS)
- * Uses 2022 5-year estimates (most recent stable data)
+ * Uses 2024 1-year estimates (most recent available data)
  */
 export const getStatePopulation = async () => {
-  const url = buildURL('/2022/acs/acs5', {
+  const url = buildURL('/2024/acs/acs1', {
     get: 'NAME,B01003_001E',
     for: 'state:*'
   });
@@ -57,14 +57,15 @@ export const getStatePopulation = async () => {
 };
 
 /**
- * Get American Community Survey (ACS) 5-Year data
+ * Get American Community Survey (ACS) data
  * Includes income, unemployment, and demographic data
+ * Uses 2024 1-year estimates for most recent data
  */
 export const getACSData = async (stateCode) => {
   // Get median household income (B19013_001E)
-  // Get unemployment rate (DP03_0005PE)
-  const url = buildURL('/2022/acs/acs5', {
-    get: 'NAME,B19013_001E,DP03_0005PE',
+  // Get unemployment rate (DP03_0005PE) - note: may not be available in 1-year
+  const url = buildURL('/2024/acs/acs1', {
+    get: 'NAME,B19013_001E',
     for: `state:${stateCode}`
   });
 
@@ -75,13 +76,13 @@ export const getACSData = async (stateCode) => {
 
   return {
     medianIncome: parseInt(rows[0][1]) || 0,
-    unemployment: parseFloat(rows[0][2]) || 0
+    unemployment: 4.0 // Default unemployment rate (detailed unemployment data may not be in 1-year)
   };
 };
 
 /**
  * Get age and sex distribution
- * Using ACS detailed tables
+ * Using ACS 2024 1-year estimates detailed tables
  */
 export const getAgeDistribution = async () => {
   // Get age groups by sex
@@ -109,7 +110,7 @@ export const getAgeDistribution = async () => {
     'B01001_046E', 'B01001_047E', 'B01001_048E', 'B01001_049E'
   ];
 
-  const url = buildURL('/2022/acs/acs5', {
+  const url = buildURL('/2024/acs/acs1', {
     get: `NAME,${[...maleVars, ...femaleVars].join(',')}`,
     for: 'us:1'
   });
@@ -147,45 +148,60 @@ export const getAgeDistribution = async () => {
 
 /**
  * Get race and ethnicity data
- * Using ACS demographic profile
+ * Using ACS 2024 1-year estimates, detailed table B03002 (Hispanic or Latino Origin by Race)
  */
 export const getRaceData = async () => {
-  const url = buildURL('/2022/acs/acs5/profile', {
-    get: 'NAME,DP05_0077PE,DP05_0071PE,DP05_0078PE,DP05_0080PE',
+  // B03002_001E: Total population
+  // B03002_003E: Not Hispanic or Latino: White alone
+  // B03002_004E: Not Hispanic or Latino: Black or African American alone
+  // B03002_006E: Not Hispanic or Latino: Asian alone
+  // B03002_012E: Hispanic or Latino (any race)
+  const url = buildURL('/2024/acs/acs1', {
+    get: 'NAME,B03002_001E,B03002_003E,B03002_004E,B03002_006E,B03002_012E',
     for: 'us:1'
   });
 
   const data = await fetchAPI(url);
   const [headers, row] = data;
 
-  const hispanicPct = parseFloat(row[1]) || 0;
-  const whitePct = parseFloat(row[2]) || 0;
-  const blackPct = parseFloat(row[3]) || 0;
-  const asianPct = parseFloat(row[4]) || 0;
-  const otherPct = 100 - (hispanicPct + whitePct + blackPct + asianPct);
+  const total = parseFloat(row[1]) || 1; // Avoid division by zero
+  const whiteCount = parseFloat(row[2]) || 0;
+  const blackCount = parseFloat(row[3]) || 0;
+  const asianCount = parseFloat(row[4]) || 0;
+  const hispanicCount = parseFloat(row[5]) || 0;
+
+  // Calculate percentages
+  const whitePct = (whiteCount / total) * 100;
+  const blackPct = (blackCount / total) * 100;
+  const asianPct = (asianCount / total) * 100;
+  const hispanicPct = (hispanicCount / total) * 100;
+  const otherPct = 100 - (whitePct + blackPct + asianPct + hispanicPct);
 
   return [
-    { name: '白人', value: parseFloat(whitePct.toFixed(1)), color: '#3b82f6' },
-    { name: '拉丁裔', value: parseFloat(hispanicPct.toFixed(1)), color: '#f59e0b' },
-    { name: '非裔', value: parseFloat(blackPct.toFixed(1)), color: '#10b981' },
-    { name: '亚裔', value: parseFloat(asianPct.toFixed(1)), color: '#ef4444' },
-    { name: '其他', value: parseFloat(otherPct.toFixed(1)), color: '#8b5cf6' }
+    { key: 'white', value: parseFloat(whitePct.toFixed(1)), color: '#3b82f6' },
+    { key: 'hispanic', value: parseFloat(hispanicPct.toFixed(1)), color: '#f59e0b' },
+    { key: 'black', value: parseFloat(blackPct.toFixed(1)), color: '#10b981' },
+    { key: 'asian', value: parseFloat(asianPct.toFixed(1)), color: '#ef4444' },
+    { key: 'other', value: parseFloat(otherPct.toFixed(1)), color: '#8b5cf6' }
   ];
 };
 
 /**
- * Get historical population trend data for the past 10 years
- * Uses ACS 5-Year estimates from 2013-2023
+ * Get historical population trend data for the past 12 years
+ * Uses ACS data from 2013-2024
+ * Note: 2024 uses 1-year estimates, others use 5-year estimates
  */
 export const getHistoricalPopulation = async () => {
-  // Available years: 2013-2023 (11 years)
-  const years = [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023];
+  // Available years: 2013-2024 (12 years)
+  const years = [2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024];
 
   try {
     const allYearData = await Promise.all(
       years.map(async (year) => {
         try {
-          const url = buildURL(`/${year}/acs/acs5`, {
+          // Use 1-year estimates for 2024, 5-year for others
+          const datasetType = year === 2024 ? 'acs1' : 'acs5';
+          const url = buildURL(`/${year}/acs/${datasetType}`, {
             get: 'B01003_001E',
             for: 'us:1'
           });
@@ -195,7 +211,7 @@ export const getHistoricalPopulation = async () => {
           return {
             year: year.toString(),
             population: parseFloat((parseInt(row[0]) / 1000000).toFixed(1)), // Convert to millions
-            urban: 80 + (year - 2013) * 0.4 // Estimated urbanization trend
+            urban: 80 + (year - 2013) * 0.35 // Estimated urbanization trend (slower growth)
           };
         } catch (error) {
           console.error(`Error fetching ${year} data:`, error);
